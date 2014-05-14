@@ -136,29 +136,29 @@ namespace CR_DeclareExtensionMethod
         }
         private string GetMethodReturnType(MethodCallExpression expression)
         {
+            string result = String.Empty;
             switch (expression.Parent.ElementType)
             {
                 case LanguageElementType.MethodCall:
                     var MethodCall = expression.Parent as MethodCall;
                     var index = MethodCall.Arguments.IndexOf(expression);
-
-                    return GetTypeOfNthParamOfMethod(index, MethodCall);
+                    result = GetTypeOfNthParamOfMethod(index, MethodCall);
+                    break;
                 case LanguageElementType.MethodCallExpression:
                     var MethodCallExpression = expression.Parent as MethodCallExpression;
                     var MCEindex = MethodCallExpression.Arguments.IndexOf(expression);
-                    return GetTypeOfNthParamOfMethod(MCEindex, MethodCallExpression);
-
-                    //var MCEDeclaration1 = expression.GetDeclaration() as Method;
-                    //var MCEParam = MCEDeclaration1.Parameters[MCEindex] as Param;
-                    //return MCEParam.GetTypeName();
-
+                    result = GetTypeOfNthParamOfMethod(MCEindex, MethodCallExpression);
+                    break;
                 case LanguageElementType.InitializedVariable:
-                    return GetTypeOfInitializedVariable(expression.Parent as InitializedVariable);
+                    result = GetTypeOfInitializedVariable(expression.Parent as InitializedVariable);
+                    break;
                 case LanguageElementType.Assignment:
-                    return GetTypeOfAssignment(expression.Parent as Assignment);
+                    result = GetTypeOfAssignment(expression.Parent as Assignment);
+                    break;
                 default:
                     throw new Exception("");
             }
+            return CodeRush.Language.GetSimpleTypeName(result);
         }
         private static string GetTypeOfNthParamOfMethod(int ParamIndex, MethodCall MethodCall)
         {
@@ -199,7 +199,9 @@ namespace CR_DeclareExtensionMethod
     {
         public static Param ToParameter(this Expression Expression, string Name)
         {
-            return new Param(CodeRush.Refactoring.GetExpressionTypeFromContext(Expression), Name);
+            string FullType = CodeRush.Refactoring.GetExpressionTypeFromContext(Expression);
+            string SimpleType = CodeRush.Language.GetSimpleTypeName(FullType);
+            return new Param(SimpleType, Name);
         }
     }
 }
