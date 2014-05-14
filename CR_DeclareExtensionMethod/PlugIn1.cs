@@ -146,9 +146,11 @@ namespace CR_DeclareExtensionMethod
                 case LanguageElementType.MethodCallExpression:
                     var MethodCallExpression = expression.Parent as MethodCallExpression;
                     var MCEindex = MethodCallExpression.Arguments.IndexOf(expression);
-                    var MCEDeclaration1 = expression.GetDeclaration() as Method;
-                    var MCEParam = MCEDeclaration1.Parameters[MCEindex] as Param;
-                    return MCEParam.GetTypeName();
+                    return GetTypeOfNthParamOfMethod(MCEindex, MethodCallExpression);
+
+                    //var MCEDeclaration1 = expression.GetDeclaration() as Method;
+                    //var MCEParam = MCEDeclaration1.Parameters[MCEindex] as Param;
+                    //return MCEParam.GetTypeName();
 
                 case LanguageElementType.InitializedVariable:
                     return GetTypeOfInitializedVariable(expression.Parent as InitializedVariable);
@@ -161,6 +163,18 @@ namespace CR_DeclareExtensionMethod
         private static string GetTypeOfNthParamOfMethod(int ParamIndex, MethodCall MethodCall)
         {
             MethodReferenceExpression OuterMethodReference = (MethodCall.Nodes[0] as DevExpress.CodeRush.StructuralParser.MethodReferenceExpression);
+
+            var Declaration1 = OuterMethodReference.GetDeclaration() as Method;
+            // Previous line will return null if any parameter isn't explicitly calculable.
+            if (Declaration1 == null)
+                return ""; // Suggest void. Wrong, but best available option.
+
+            var Param = Declaration1.Parameters[ParamIndex] as Param;
+            return Param.GetTypeName();
+        }
+        private static string GetTypeOfNthParamOfMethod(int ParamIndex, MethodCallExpression MethodCallExpression)
+        {
+            MethodReferenceExpression OuterMethodReference = (MethodCallExpression.Nodes[0] as DevExpress.CodeRush.StructuralParser.MethodReferenceExpression);
 
             var Declaration1 = OuterMethodReference.GetDeclaration() as Method;
             // Previous line will return null if any parameter isn't explicitly calculable.
