@@ -55,6 +55,8 @@ namespace CR_DeclareExtensionMethod
             ElementReferenceExpression TheObject = MethodReferenceExpression.Nodes[0] as ElementReferenceExpression;
             if (TheObject == null)
                 return;
+            if (TheObject.GetDeclaration().ElementType == LanguageElementType.Class)
+                return;
 
             // Require: Method does not exist on Object class.
             // Require: Method does not exist as Extension Method.
@@ -92,9 +94,7 @@ namespace CR_DeclareExtensionMethod
                 Variable variable = TheObject.GetDeclaration() as Variable;
                 string TheObjectClassName = (variable.DetailNodes[0] as TypeReferenceExpression).Name;
                 string ClassName = TheObjectClassName + "Ext";
-                var NewClass = new Class(ClassName);
-                NewClass.IsStatic = true;
-                NewClass.Visibility = MemberVisibility.Public;
+
 
                 // NEW METHOD
                 string ReturnTypeName;
@@ -121,18 +121,43 @@ namespace CR_DeclareExtensionMethod
                     NewMethod.Parameters.Add(expression.ToParameter("Param" + index));
                 }
 
-                // Put Everything Together
-                NewClass.AddNode(NewMethod);
                 LanguageElement ParentNamespace = TheElement.GetParent(LanguageElementType.Namespace);
-                ParentNamespace.AddNode(NewClass);
+                Class ExtensionClass = getClassInNamespace(ClassName, ParentNamespace);
+                LanguageElement Parent;
+                LanguageElement Child;
 
-                // Insert new Code into Document
-                SourceRange NSRange = ParentNamespace.GetFullBlockRange();
-                SourcePoint InsertPoint = new SourcePoint(NSRange.End.Line, 1);
-                SourceRange FormatRange = ea.TextDocument.InsertText(InsertPoint, CodeRush.Language.GenerateElement(NewClass));
+                if (ExtensionClass == null)
+                {
+                    ExtensionClass = new Class(ClassName);
+                    ExtensionClass.IsStatic = true;
+                    ExtensionClass.Visibility = MemberVisibility.Public;
+                    ParentNamespace.AddNode(ExtensionClass);
 
+                    Child = ExtensionClass;
+                    Parent = ParentNamespace;
+                }
+                else
+                {
+                    Child = NewMethod;
+                    Parent = ExtensionClass;
+                }
+                ExtensionClass.AddNode(NewMethod);
+                SourceRange FormatRange = InsertChildAtEndOfParent(Child, (DelimiterCapableBlock)Parent, ea.TextDocument);
                 ea.TextDocument.Format(FormatRange);
             }
+        }
+        private static SourceRange InsertChildAtEndOfParent(LanguageElement Child, DelimiterCapableBlock Parent, TextDocument textDocument)
+        {
+            SourceRange NSRange = Parent.GetFullBlockRange();
+            SourcePoint InsertPoint = new SourcePoint(NSRange.End.Line, 1);
+            return textDocument.InsertText(InsertPoint, CodeRush.Language.GenerateElement(Child));
+        }
+        private Class getClassInNamespace(string ClassName, LanguageElement ParentNamespace)
+        {
+            ITypeElement FoundClass = CodeRush.Source.FindType(ClassName, ParentNamespace);
+            if (FoundClass == null)
+                return null;
+            return (Class)FoundClass.ToLanguageElement();
         }
         private string GetMethodReturnType(MethodCallExpression expression)
         {
